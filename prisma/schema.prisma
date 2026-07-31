@@ -99,6 +99,7 @@ enum KycStatus {
   unverified
   pending
   verified
+  rejected
 }
 
 enum UserTier {
