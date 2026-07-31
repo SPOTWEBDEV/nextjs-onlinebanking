@@ -124,7 +124,7 @@ export interface User {
   email: string;
   phone: string;
   avatarInitials: string;
-  kycStatus: "unverified" | "pending" | "verified";
+  kycStatus: "unverified" | "pending" | "verified"  | "rejected" ;
   tier: "standard" | "premium" | "business";
   securityScore: number;
 }
@@ -134,7 +134,7 @@ export interface AdminCustomer {
   name: string;
   email: string;
   status: "active" | "suspended" | "frozen";
-  kyc: "pending" | "verified" | "rejected";
+  kyc: "pending" | "verified" | "rejected" | "unverified";
   joined: string;
   balance: number;
 }
