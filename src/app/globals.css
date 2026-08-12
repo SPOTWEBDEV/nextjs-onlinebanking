@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 33% 98%;
+    --foreground: 222 47% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 9%;
+    --muted: 216 33% 95%;
+    --muted-foreground: 220 14% 40%;
+    --border: 216 28% 90%;
+    --input: 216 28% 90%;
+    --ring: 165 55% 27%;
+  }
+
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 210 33% 96%;
+    --card: 222 40% 10%;
+    --card-foreground: 210 33% 96%;
+    --popover: 222 40% 10%;
+    --popover-foreground: 210 33% 96%;
+    --muted: 222 30% 15%;
+    --muted-foreground: 216 15% 65%;
+    --border: 222 25% 18%;
+    --input: 222 25% 18%;
+    --ring: 158 55% 45%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  /* Tabular figures for every balance / account digit in the app */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  ::selection {
+    @apply bg-mint-100 text-emerald-600;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .app-shell {
+    @apply mx-auto w-full max-w-app min-h-dvh bg-background relative;
+  }
+
+  .glass {
+    @apply bg-white/70 dark:bg-ink-900/60 backdrop-blur-xl border border-white/40 dark:border-white/5;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden bg-muted;
+  }
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full;
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--foreground) / 0.06),
+      transparent
+    );
+    animation: shimmer 1.6s infinite;
+  }
+}

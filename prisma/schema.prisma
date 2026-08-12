@@ -1,0 +1,395 @@
+// Banco Aurora — Prisma schema
+// Run `npx prisma db push` (or `migrate dev`) after setting DATABASE_URL
+// in .env, then `npx prisma db seed` to populate demo data.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum AccountType {
+  current
+  savings
+  business
+  fixed_deposit
+}
+
+enum AccountStatus {
+  active
+  dormant
+  frozen
+  closed
+}
+
+enum TransactionType {
+  credit
+  debit
+}
+
+enum TransactionCategory {
+  transfer
+  bills
+  shopping
+  food
+  transport
+  income
+  entertainment
+  subscription
+  loan
+  savings
+  atm
+  deposit
+  adjustment
+}
+
+enum TransactionStatus {
+  completed
+  pending
+  failed
+}
+
+enum BeneficiaryType {
+  local
+  international
+  internal
+}
+
+enum CardBrand {
+  visa
+  mastercard
+}
+
+enum CardType {
+  physical
+  virtual
+}
+
+enum CardStatus {
+  active
+  frozen
+  blocked
+}
+
+enum NotificationCategory {
+  transaction
+  security
+  promotion
+  loan
+  card
+}
+
+enum LoanStatus {
+  pending
+  approved
+  rejected
+  active
+  closed
+}
+
+enum SavingsGoalType {
+  flexible
+  fixed
+  auto
+}
+
+enum KycStatus {
+  unverified
+  pending
+  verified
+  rejected
+}
+
+enum UserTier {
+  standard
+  premium
+  business
+}
+
+enum CustomerStatus {
+  active
+  suspended
+  frozen
+}
+
+enum PaymentAccountType {
+  bank
+  crypto
+  mobile_money
+}
+
+enum AdminRole {
+  super_admin
+  admin
+}
+
+enum AdminStatus {
+  active
+  suspended
+}
+
+// Separate from User (customers) — staff accounts that manage the platform.
+model Admin {
+  id                String      @id @default(cuid())
+  fullName          String
+  email             String      @unique
+  passwordHash      String
+  role              AdminRole   @default(admin)
+  status            AdminStatus @default(active)
+  suspensionReason  String?
+  createdAt         DateTime    @default(now())
+}
+
+model User {
+  id             String   @id @default(cuid())
+  fullName       String
+  email          String   @unique
+  phone          String
+  passwordHash   String?
+  avatarInitials String
+  kycStatus      KycStatus @default(pending)
+  tier           UserTier  @default(standard)
+  status         CustomerStatus @default(active)
+  securityScore  Int       @default(50)
+  transferPinHash String?
+  emailVerified  Boolean   @default(false)
+  phoneVerified  Boolean   @default(false)
+  // Accessibility / support needs an admin can tag on a customer (e.g.
+  // "blind", "deaf", "elderly") so support staff know to accommodate them.
+  // Free-form strings rather than a rigid enum so new tags don't need a
+  // schema migration.
+  specialNeeds   String[]  @default([])
+  createdBy      String?   // "self" for self-registration, or an admin's user id
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  accounts      Account[]
+  beneficiaries Beneficiary[]
+  cards         Card[]
+  notifications Notification[]
+  loanApplications LoanApplication[]
+  savingsGoals  SavingsGoal[]
+  verificationCodes VerificationCode[]
+
+  @@map("users")
+}
+
+enum VerificationPurpose {
+  email
+  phone
+  login
+}
+
+// Stores OTP/2FA codes so support staff can look one up in the admin
+// console and read it to a customer over chat if they say they never
+// received the email/SMS — there's no real email/SMS provider wired up
+// in this demo, so this is the recovery path described in the brief.
+model VerificationCode {
+  id          String              @id @default(cuid())
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code        String
+  purpose     VerificationPurpose
+  destination String
+  used        Boolean             @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime            @default(now())
+
+  @@map("verification_codes")
+}
+
+model Account {
+  id               String        @id @default(cuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nickname         String
+  type             AccountType
+  accountNumber    String
+  iban             String
+  nib              String
+  swiftCode        String
+  currency         String        @default("EUR")
+  balance          Decimal       @db.Decimal(14, 2)
+  availableBalance Decimal       @db.Decimal(14, 2)
+  ledgerBalance    Decimal       @db.Decimal(14, 2)
+  status           AccountStatus @default(active)
+  createdAt        DateTime      @default(now())
+
+  transactions Transaction[]
+
+  @@map("accounts")
+}
+
+model Transaction {
+  id            String              @id @default(cuid())
+  accountId     String
+  account       Account             @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  date          DateTime            @default(now())
+  description   String
+  counterparty  String
+  category      TransactionCategory
+  type          TransactionType
+  amount        Decimal             @db.Decimal(14, 2)
+  currency      String              @default("EUR")
+  status        TransactionStatus   @default(completed)
+  reference     String
+
+  @@map("transactions")
+}
+
+model Beneficiary {
+  id            String          @id @default(cuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  bank          String
+  accountNumber String
+  currency      String          @default("EUR")
+  favourite     Boolean         @default(false)
+  type          BeneficiaryType
+  createdAt     DateTime        @default(now())
+
+  @@map("beneficiaries")
+}
+
+model Card {
+  id              String     @id @default(cuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holder          String
+  numberMasked    String
+  fullNumber      String
+  expiry          String
+  cvv             String
+  brand           CardBrand
+  type            CardType
+  status          CardStatus @default(active)
+  spendLimit      Decimal    @db.Decimal(14, 2)
+  spentThisMonth  Decimal    @db.Decimal(14, 2) @default(0)
+  currency        String     @default("EUR")
+  createdAt       DateTime   @default(now())
+
+  @@map("cards")
+}
+
+model Notification {
+  id        String               @id @default(cuid())
+  userId    String
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  category  NotificationCategory
+  read      Boolean              @default(false)
+  date      DateTime             @default(now())
+
+  @@map("notifications")
+}
+
+model LoanProduct {
+  id            String @id @default(cuid())
+  name          String
+  rate          Decimal @db.Decimal(5, 2)
+  maxAmount     Decimal @db.Decimal(14, 2)
+  maxTermMonths Int
+  description   String
+
+  applications LoanApplication[]
+
+  @@map("loan_products")
+}
+
+model LoanApplication {
+  id                 String      @id @default(cuid())
+  userId             String
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId          String
+  product             LoanProduct @relation(fields: [productId], references: [id])
+  amount             Decimal     @db.Decimal(14, 2)
+  termMonths         Int
+  status             LoanStatus  @default(pending)
+  nextPaymentDate    DateTime?
+  nextPaymentAmount  Decimal     @db.Decimal(14, 2) @default(0)
+  remainingBalance   Decimal     @db.Decimal(14, 2)
+  createdAt          DateTime    @default(now())
+
+  @@map("loan_applications")
+}
+
+model SavingsGoal {
+  id       String          @id @default(cuid())
+  userId   String
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name     String
+  target   Decimal         @db.Decimal(14, 2)
+  saved    Decimal         @db.Decimal(14, 2) @default(0)
+  emoji    String
+  type     SavingsGoalType
+
+  @@map("savings_goals")
+}
+
+model InvestmentHolding {
+  id        String @id @default(cuid())
+  name      String
+  ticker    String
+  units     Decimal @db.Decimal(14, 4)
+  value     Decimal @db.Decimal(14, 2)
+  costBasis Decimal @db.Decimal(14, 2)
+  changePct Decimal @db.Decimal(6, 2)
+
+  @@map("investment_holdings")
+}
+
+// Denormalized admin view of customers for the admin console.
+// In a larger system this would be a query/view over User + Account instead
+// of a separate table — kept simple here for the demo's admin screens.
+// Admin-managed deposit destinations (bank account, crypto wallet, mobile
+// money number, etc). These are shown to customers on the "Bank Transfer"
+// deposit tab; deposits made against them are always manually reviewed by
+// an admin — see /api/deposits and /api/transactions/[id]/resolve.
+model PaymentAccount {
+  id        String             @id @default(cuid())
+  label     String
+  type      PaymentAccountType
+  details   String
+  currency  String             @default("EUR")
+  active    Boolean            @default(true)
+  createdAt DateTime           @default(now())
+
+  @@map("payment_accounts")
+}
+
+// Real login attempt log, powering the admin Security Dashboard.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  success   Boolean
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@map("login_attempts")
+}
+
+model MonthlySpending {
+  id       String  @id @default(cuid())
+  month    String
+  income   Decimal @db.Decimal(14, 2)
+  expenses Decimal @db.Decimal(14, 2)
+  sortIndex Int    @default(0)
+
+  @@map("monthly_spending")
+}
+
+model CategorySpending {
+  id       String  @id @default(cuid())
+  category String
+  value    Decimal @db.Decimal(14, 2)
+  color    String
+
+  @@map("category_spending")
+}
