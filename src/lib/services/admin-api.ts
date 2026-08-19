@@ -218,3 +218,88 @@ export async function togglePaymentAccount(id: string, active: boolean) {
 export async function deletePaymentAccount(id: string) {
   return adminRequest<{ id: string }>(`/api/admin/payment-accounts/${id}`, { method: "DELETE" });
 }
+
+// ---------- Platform-wide accounts/transactions/cards/loans (real, all customers) ----------
+export interface AdminAccountRow {
+  id: string;
+  nickname: string;
+  accountNumber: string;
+  type: string;
+  currency: string;
+  balance: number;
+  status: string;
+  ownerName: string;
+  ownerEmail: string;
+}
+
+export async function fetchAllAccounts() {
+  return adminRequest<{
+    stats: { total: number; active: number; current: number; savings: number; frozen: number; closed: number };
+    accounts: AdminAccountRow[];
+  }>("/api/admin/all-accounts");
+}
+
+export interface AdminTransactionRow {
+  id: string;
+  date: string;
+  description: string;
+  reference: string;
+  amount: number;
+  currency: string;
+  status: string;
+  type: string;
+  category: string;
+  ownerName: string;
+  ownerEmail: string;
+}
+
+export async function fetchAllTransactions() {
+  return adminRequest<{
+    stats: { total: number; pending: number };
+    transactions: AdminTransactionRow[];
+  }>("/api/admin/all-transactions");
+}
+
+export interface AdminCardRow {
+  id: string;
+  numberMasked: string;
+  holder: string;
+  type: string;
+  status: string;
+  spendLimit: number;
+  currency: string;
+  ownerName: string;
+  ownerEmail: string;
+}
+
+export async function fetchAllCards() {
+  return adminRequest<{
+    stats: { total: number; physical: number; virtual: number; frozen: number; blocked: number };
+    cards: AdminCardRow[];
+  }>("/api/admin/all-cards");
+}
+
+export async function setAdminCardStatus(id: string, status: "active" | "frozen" | "blocked") {
+  return adminRequest<{ id: string }>(`/api/admin/all-cards/${id}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export interface AdminLoanRow {
+  id: string;
+  productName: string;
+  amount: number;
+  remainingBalance: number;
+  status: string;
+  ownerName: string;
+  ownerEmail: string;
+}
+
+export async function fetchAllLoans() {
+  return adminRequest<{
+    stats: { total: number; active: number; pending: number; approved: number; rejected: number };
+    applications: AdminLoanRow[];
+    products: { id: string; name: string; rate: number; maxAmount: number }[];
+  }>("/api/admin/all-loans");
+}
