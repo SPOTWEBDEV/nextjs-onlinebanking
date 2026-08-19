@@ -3,8 +3,8 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-const SUPER_ADMIN_EMAIL = "admin@admin.com";
-const SUPER_ADMIN_PASSWORD = "admin@admin.com@2026";
+const SUPER_ADMIN_EMAIL = "support@spotwebtech.com.ng";
+const SUPER_ADMIN_PASSWORD = "SpotAdmin2026!";
 
 /**
  * Clean-slate seed: every table starts empty EXCEPT a single super admin
