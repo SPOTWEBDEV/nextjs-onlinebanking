@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { UnauthenticatedError } from "@/lib/current-user.server";
 
 /**
  * Shared error handler for API routes. Logs the full error (with stack)
@@ -12,6 +13,10 @@ import { NextResponse } from "next/server";
  * internal details (table names, query structure, etc.) aren't exposed.
  */
 export function handleApiError(err: unknown, context: string) {
+  if (err instanceof UnauthenticatedError) {
+    return NextResponse.json({ error: "Not authenticated — please log in again." }, { status: 401 });
+  }
+
   console.error(`[API ERROR] ${context}:`, err);
 
   const isPrismaConnectionError =
